@@ -16,6 +16,8 @@ import {
   FOLLOWING_PAGE_SAFETY_LIMIT,
   CHECKS_BEFORE_LONG_SLEEP,
   FOLLOWERS_LOADED_MIN_RATIO,
+  FRIENDSHIP_STATUS_COST_FACTOR,
+  FRIENDSHIP_STATUS_MAX_FOLLOWING,
   INSTAGRAM_HOSTNAME,
   RATE_LIMIT_COOLDOWN_SECONDS,
 } from "./constants/constants";
@@ -24,9 +26,9 @@ import {
   assertUnreachable,
   createFollowerIndex,
   fetchFriendshipsPage,
+  fetchFriendshipStatus,
   fetchViewerFollowerCount,
   FriendshipsListKind,
-  FriendshipsPage,
   getCookie,
   getCurrentPageUnfollowers,
   getUsersForDisplay,
@@ -400,24 +402,24 @@ function App() {
   }, [isActiveProcess, state]);
 
   useEffect(() => {
-    // Fetches one page, retrying with backoff on rate limits / network errors.
+    // Runs one Instagram request, retrying with backoff on rate limits / network errors.
     // `blocked` is true when retries were exhausted for such a transient error
     // (the scan should stop); false means a different, non-retryable error
     // (e.g. 404 / unavailable account), which callers may choose to skip.
-    type PageResult =
-      | { readonly ok: true; readonly page: FriendshipsPage }
+    type RequestResult<T> =
+      | { readonly ok: true; readonly value: T }
       | { readonly ok: false; readonly blocked: boolean };
 
-    const fetchPageWithRetry = async (
+    const fetchWithRetry = async <T,>(
       label: string,
-      request: () => Promise<FriendshipsPage>,
-    ): Promise<PageResult> => {
+      request: () => Promise<T>,
+    ): Promise<RequestResult<T>> => {
       let retries = 0;
       const maxRetries = 3;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       while (true) {
         try {
-          return { ok: true, page: await request() };
+          return { ok: true, value: await request() };
         } catch (e: any) {
           const status = e?.status;
           const message = String(e?.message ?? "");
@@ -490,12 +492,12 @@ function App() {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       while (true) {
         const pageMaxId = maxId;
-        const result = await fetchPageWithRetry(kind, () => fetchFriendshipsPage(kind, pageMaxId, timings.usersPerSearchCycle));
+        const result = await fetchWithRetry(kind, () => fetchFriendshipsPage(kind, pageMaxId, timings.usersPerSearchCycle));
         if (!result.ok) {
           console.error(`Stopping ${kind} scan early.`);
           return false;
         }
-        const page = result.page;
+        const page = result.value;
         const pageUsers = page.users ?? [];
 
         if (!(await onPageUsers(pageUsers))) {
@@ -522,6 +524,84 @@ function App() {
       setState(prevState =>
         prevState.status === "scanning" ? { ...prevState, percentage } : prevState,
       );
+
+    type StatusCheckOutcome = {
+      readonly nonFollowers: readonly UserNode[];
+      readonly checkedCount: number;
+      readonly complete: boolean;
+      readonly blocked: boolean;
+    };
+
+    // Asks Instagram, account by account, whether each followed account follows
+    // the viewer back, so the cost grows with how many accounts the viewer
+    // follows, not with how many followers they have. Resolves null if
+    // Instagram doesn't give this session that answer, in which case the
+    // caller walks the followers list instead.
+    const checkByFriendshipStatus = async (following: readonly RawFriendshipUser[]): Promise<StatusCheckOutcome | null> => {
+      const nonFollowers: UserNode[] = [];
+      let checkedCount = 0;
+      let skippedCount = 0;
+      let blocked = false;
+
+      for (const user of following) {
+        await paceRequest();
+        const result = await fetchWithRetry(
+          `Friendship status for ${user.username}`,
+          () => fetchFriendshipStatus(String(user.pk_id ?? user.pk)),
+        );
+        if (!result.ok && result.blocked) {
+          blocked = true;
+          break;
+        }
+        if (!result.ok) {
+          if (checkedCount === 0 && skippedCount === 0) {
+            console.warn("Friendship status isn't available; walking the followers list instead.");
+            return null;
+          }
+          // A non-retryable failure for one account (e.g. unavailable profile)
+          // leaves it unverified, so it's skipped rather than listed.
+          skippedCount++;
+        } else if (!result.value.following) {
+          // Every account checked here is one the viewer follows, so an answer
+          // saying otherwise can't be trusted for followed_by either.
+          console.warn(`Ignoring inconsistent friendship status for ${user.username}.`);
+          skippedCount++;
+        } else {
+          checkedCount++;
+          if (!result.value.followedBy) {
+            const node = rawFriendshipUserToUserNode(user, false);
+            nonFollowers.push(node);
+            setState(prevState =>
+              prevState.status === "scanning"
+                ? { ...prevState, results: [...prevState.results, node] }
+                : prevState,
+            );
+          }
+        }
+
+        const done = checkedCount + skippedCount;
+        setState(prevState =>
+          prevState.status === "scanning"
+            ? {
+                ...prevState,
+                percentage: Math.min(99, 10 + Math.round((89 * done) / following.length)),
+                totalScanned: checkedCount,
+              }
+            : prevState,
+        );
+        setToast({
+          show: true,
+          text: t(lang, "scanningFollowingProgress", done, following.length),
+        });
+      }
+
+      return {
+        nonFollowers,
+        checkedCount,
+        complete: !blocked && skippedCount === 0 && checkedCount === following.length,
+        blocked,
+      };
+    };
 
     // Loads and dual-indexes every follower by ID and normalized lowercase
     // username, then compares the following list against it. Resolves null if
@@ -613,24 +693,42 @@ function App() {
       }
       setScanPercentage(10);
 
-      // Phase 2: Index every follower and keep the followed accounts missing from it.
+      // Phase 2: Find out which of them follow back, picking the method that
+      // needs fewer requests for this account.
       await paceRequest();
       const followerCount = await fetchViewerFollowerCount(viewerId);
-      const nonFollowers = await checkByFollowerIndex(following, followerCount);
-      if (nonFollowers === null) {
-        setState(prevState =>
-          prevState.status === "scanning"
-            ? { ...prevState, isScanningActive: false, scanIncomplete: true }
-            : prevState,
-        );
-        setToast({
-          show: true,
-          text: t(lang, "scanFailedFollowers"),
-        });
-        return;
+      const statusCheckIsCheaper = followerCount === null
+        ? following.length <= FRIENDSHIP_STATUS_MAX_FOLLOWING
+        : following.length * FRIENDSHIP_STATUS_COST_FACTOR <= followerCount;
+      const statusOutcome = statusCheckIsCheaper ? await checkByFriendshipStatus(following) : null;
+
+      let nonFollowers: readonly UserNode[];
+      let checkedCount: number;
+      let scanIsComplete: boolean;
+      let blocked = false;
+      if (statusOutcome !== null) {
+        nonFollowers = statusOutcome.nonFollowers;
+        checkedCount = statusOutcome.checkedCount;
+        scanIsComplete = followingCompleted && statusOutcome.complete;
+        blocked = statusOutcome.blocked;
+      } else {
+        const indexed = await checkByFollowerIndex(following, followerCount);
+        if (indexed === null) {
+          setState(prevState =>
+            prevState.status === "scanning"
+              ? { ...prevState, isScanningActive: false, scanIncomplete: true }
+              : prevState,
+          );
+          setToast({
+            show: true,
+            text: t(lang, "scanFailedFollowers"),
+          });
+          return;
+        }
+        nonFollowers = indexed;
+        checkedCount = following.length;
+        scanIsComplete = followingCompleted;
       }
-      const checkedCount = following.length;
-      const scanIsComplete = followingCompleted;
 
       if (scanIsComplete || nonFollowers.length > 0) {
         saveCachedScanResults(nonFollowers);
@@ -651,12 +749,15 @@ function App() {
         };
       });
 
-      setToast({
-        show: true,
-        text: scanIsComplete
-          ? t(lang, "scanCompleted")
-          : t(lang, "partialScanInterrupted", checkedCount),
-      });
+      let finalToast: string;
+      if (scanIsComplete) {
+        finalToast = t(lang, "scanCompleted");
+      } else if (blocked) {
+        finalToast = t(lang, "scanBlocked", checkedCount);
+      } else {
+        finalToast = t(lang, "partialScanInterrupted", checkedCount);
+      }
+      setToast({ show: true, text: finalToast });
     };
     scan();
     // Dependency array not entirely legit, but works this way. TODO: Find a way to fix.

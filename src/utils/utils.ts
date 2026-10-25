@@ -451,6 +451,33 @@ export async function fetchFriendshipsPage(kind: FriendshipsListKind, maxId?: st
 }
 
 async function fetchFriendshipsPageFromUrl(url: string, headers?: Record<string, string>): Promise<FriendshipsPage> {
+  const data = await fetchInstagramJson(url, headers);
+  if (!data?.users && data?.message) {
+    throw new InstagramApiError(200, data.message);
+  }
+  return data as FriendshipsPage;
+}
+
+export interface FriendshipStatus {
+  readonly following: boolean;
+  readonly followedBy: boolean;
+}
+
+// Asks Instagram directly whether the viewer follows `userId` and whether
+// `userId` follows the viewer back.
+export async function fetchFriendshipStatus(userId: string): Promise<FriendshipStatus> {
+  const url = `https://www.instagram.com/api/v1/friendships/show/${userId}/`;
+  const data = await fetchInstagramJson(url);
+  if (typeof data?.followed_by !== 'boolean' || typeof data?.following !== 'boolean') {
+    throw new InstagramApiError(200, `Instagram returned no friendship status for ${url}`);
+  }
+  return {
+    following: data.following || data.outgoing_request === true,
+    followedBy: data.followed_by,
+  };
+}
+
+async function fetchInstagramJson(url: string, headers?: Record<string, string>): Promise<any> {
   if (headers === undefined) {
     const csrftoken = getCookie('csrftoken') || '';
     headers = {
@@ -484,10 +511,10 @@ async function fetchFriendshipsPageFromUrl(url: string, headers?: Record<string,
   if (data === null) {
     throw new InstagramApiError(response.status, `Instagram returned a web page instead of data for ${url} (logged out, or Instagram wants you to verify the account?)`);
   }
-  if (data?.status === 'fail' || (!data?.users && data?.message)) {
+  if (data?.status === 'fail') {
     throw new InstagramApiError(response.status, data?.message || `Instagram returned failure status for ${url}`);
   }
-  return data as FriendshipsPage;
+  return data;
 }
 
 export function rawFriendshipUserToUserNode(raw: RawFriendshipUser, followsViewer: boolean): UserNode {

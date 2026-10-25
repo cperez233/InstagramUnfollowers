@@ -21,6 +21,13 @@ export const INSTAGRAM_UNFOLLOW_FRIENDLY_NAME = "usePolarisUnfollowMutation";
 // `count` we request), so followers needs a much higher cap to finish.
 export const FOLLOWING_PAGE_SAFETY_LIMIT = 250;
 export const FOLLOWERS_PAGE_SAFETY_LIMIT = 1500;
+// Asking Instagram for each followed account's friendship status costs one
+// request per followed account; walking the followers list costs roughly one
+// per 12-25 followers and fails as a whole if any page fails. The per-account
+// check is used whenever following * this factor <= followers.
+export const FRIENDSHIP_STATUS_COST_FACTOR = 10;
+// Used when the follower count can't be loaded.
+export const FRIENDSHIP_STATUS_MAX_FOLLOWING = 1500;
 // The followers walk only counts as complete if it loaded at least this share
 // of the viewer's follower count.
 export const FOLLOWERS_LOADED_MIN_RATIO = 0.97;

@@ -1,12 +1,11 @@
-import React, { FC } from "react"
+/* editorial-ui · Cristian Pérez · cristianperez.me */
+import React, { FC } from "react";
 
-export const Logo: FC = () => {
-    return (
-        <svg width="50" height="50" viewBox="0 0 354 354" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="177" cy="177" r="177" fill="#111111" />
-            <circle cx="177" cy="115" r="50" fill="#222222" />
-            <ellipse cx="177" cy="243" rx="76" ry="66" fill="#222222" />
-            <rect x="243" y="112" width="66" height="20" rx="10" fill="#00FFFF" />
-        </svg>
-    )
-}
+// A person with a minus: someone who left your followers.
+export const Logo: FC = () => (
+  <svg className="iu-logo" width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+    <circle cx="11" cy="9" r="4.25" stroke="currentColor" strokeWidth="2" />
+    <path d="M3.5 23.5c.6-4.3 3.6-7 7.5-7s6.9 2.7 7.5 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M19.5 10.5h6" stroke="var(--iu-accent)" strokeWidth="2.25" strokeLinecap="round" />
+  </svg>
+);

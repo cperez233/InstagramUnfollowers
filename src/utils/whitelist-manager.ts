@@ -193,3 +193,22 @@ export const loadCachedScanResults = (): { results: readonly UserNode[]; timesta
     return null;
   }
 };
+
+/**
+ * Drop an account from the saved scan (e.g. after unfollowing it) without
+ * changing when that scan was made.
+ */
+export const removeFromCachedScan = (userId: string): void => {
+  try {
+    const cached = loadCachedScanResults();
+    if (!cached) {
+      return;
+    }
+    localStorage.setItem(
+      LAST_SCAN_RESULTS_STORAGE_KEY,
+      JSON.stringify(cached.results.filter(user => user.id !== userId)),
+    );
+  } catch (e) {
+    console.warn("Could not update cached scan results:", e);
+  }
+};

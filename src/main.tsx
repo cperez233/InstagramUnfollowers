@@ -15,9 +15,7 @@ import {
   FOLLOWERS_PAGE_SAFETY_LIMIT,
   FOLLOWING_PAGE_SAFETY_LIMIT,
   CHECKS_BEFORE_LONG_SLEEP,
-  FOLLOW_BACK_CANARY_INTERVAL,
-  FOLLOW_BACK_SEARCH_COST_FACTOR,
-  FOLLOW_BACK_SEARCH_MAX_FOLLOWING,
+  FOLLOWERS_LOADED_MIN_RATIO,
   INSTAGRAM_HOSTNAME,
   RATE_LIMIT_COOLDOWN_SECONDS,
 } from "./constants/constants";
@@ -25,7 +23,6 @@ import {
   addFollowerToIndex,
   assertUnreachable,
   createFollowerIndex,
-  extractUserIdentities,
   fetchFriendshipsPage,
   fetchViewerFollowerCount,
   FriendshipsListKind,
@@ -35,10 +32,8 @@ import {
   getUsersForDisplay,
   InstagramApiError,
   isUserInFollowerIndex,
-  pageIncludesUser,
   RawFriendshipUser,
   rawFriendshipUserToUserNode,
-  searchFriendshipsPage,
   sleep,
   unfollowUser,
 } from "./utils/utils";
@@ -528,134 +523,6 @@ function App() {
         prevState.status === "scanning" ? { ...prevState, percentage } : prevState,
       );
 
-    type SearchOutcome = {
-      readonly nonFollowers: readonly UserNode[];
-      readonly checkedCount: number;
-      readonly complete: boolean;
-      readonly stopReason: "blocked" | "unreliable" | null;
-    };
-
-    // Checks each followed account with one search of the viewer's followers,
-    // so the cost grows with how many accounts the viewer follows, not with
-    // how many followers they have. Resolves null if searching can't be
-    // trusted on this account, in which case the caller walks the followers
-    // list instead.
-    const checkBySearchingFollowers = async (
-      viewerId: string,
-      following: readonly RawFriendshipUser[],
-    ): Promise<SearchOutcome | null> => {
-      // People known to follow the viewer, searched now and then to make sure
-      // searches still find followers. Otherwise a throttled Instagram
-      // answering with empty lists would flag every mutual as a non-follower.
-      await paceRequest();
-      const firstFollowersPage = await fetchPageWithRetry("followers", () => fetchFriendshipsPage("followers", undefined, 12));
-      if (!firstFollowersPage.ok) {
-        return firstFollowersPage.blocked
-          ? { nonFollowers: [], checkedCount: 0, complete: false, stopReason: "blocked" }
-          : null;
-      }
-      const knownFollowers = (firstFollowersPage.page.users ?? []).filter(user => user.username);
-      if (knownFollowers.length === 0) {
-        // No followers at all, so nobody follows back.
-        return {
-          nonFollowers: following.map(user => rawFriendshipUserToUserNode(user, false)),
-          checkedCount: following.length,
-          complete: true,
-          stopReason: null,
-        };
-      }
-
-      let canaryTurn = 0;
-      const searchStillFindsFollowers = async (): Promise<"found" | "not_found" | "blocked"> => {
-        const canary = knownFollowers[canaryTurn++ % knownFollowers.length];
-        await paceRequest();
-        const result = await fetchPageWithRetry(
-          "Follower search check",
-          () => searchFriendshipsPage("followers", canary.username, viewerId),
-        );
-        if (!result.ok) {
-          return result.blocked ? "blocked" : "not_found";
-        }
-        return pageIncludesUser(result.page, extractUserIdentities(canary).ids, canary.username) ? "found" : "not_found";
-      };
-
-      const initialCheck = await searchStillFindsFollowers();
-      if (initialCheck === "blocked") {
-        return { nonFollowers: [], checkedCount: 0, complete: false, stopReason: "blocked" };
-      }
-      if (initialCheck === "not_found") {
-        console.warn("Searching followers doesn't work on this account; walking the followers list instead.");
-        return null;
-      }
-
-      const nonFollowers: UserNode[] = [];
-      let pending: UserNode[] = [];
-      let checkedCount = 0;
-      let pendingCount = 0;
-      let skippedCount = 0;
-      let stopReason: SearchOutcome["stopReason"] = null;
-
-      for (let i = 0; i < following.length; i++) {
-        const user = following[i];
-        const { ids, username } = extractUserIdentities(user);
-        await paceRequest();
-        const result = await fetchPageWithRetry(
-          `Follower search for ${username}`,
-          () => searchFriendshipsPage("followers", username, viewerId),
-        );
-        if (!result.ok && result.blocked) {
-          stopReason = "blocked";
-          break;
-        }
-        if (result.ok) {
-          if (!pageIncludesUser(result.page, ids, username)) {
-            pending.push(rawFriendshipUserToUserNode(user, false));
-          }
-        } else {
-          // A non-retryable failure for one account leaves it unverified, so
-          // it's skipped rather than listed.
-          skippedCount++;
-        }
-        pendingCount++;
-
-        setScanPercentage(Math.min(99, 10 + Math.round((89 * (checkedCount + pendingCount)) / following.length)));
-        setToast({
-          show: true,
-          text: t(lang, "scanningFollowingProgress", checkedCount + pendingCount, following.length),
-        });
-
-        if (pendingCount >= FOLLOW_BACK_CANARY_INTERVAL || i === following.length - 1) {
-          const check = await searchStillFindsFollowers();
-          if (check !== "found") {
-            // Drop what was found since the last good check: it can't be trusted.
-            stopReason = check === "blocked" ? "blocked" : "unreliable";
-            break;
-          }
-          const confirmed = pending;
-          nonFollowers.push(...confirmed);
-          checkedCount += pendingCount;
-          pending = [];
-          pendingCount = 0;
-          setState(prevState =>
-            prevState.status === "scanning"
-              ? {
-                  ...prevState,
-                  results: confirmed.length > 0 ? [...prevState.results, ...confirmed] : prevState.results,
-                  totalScanned: checkedCount,
-                }
-              : prevState,
-          );
-        }
-      }
-
-      return {
-        nonFollowers,
-        checkedCount,
-        complete: stopReason === null && skippedCount === 0 && checkedCount === following.length,
-        stopReason,
-      };
-    };
-
     // Loads and dual-indexes every follower by ID and normalized lowercase
     // username, then compares the following list against it. Resolves null if
     // the followers list couldn't be loaded completely: an incomplete index
@@ -687,6 +554,13 @@ function App() {
 
       await paceRequest();
       if (!(await fetchList("followers", FOLLOWERS_PAGE_SAFETY_LIMIT, indexFollowersPage))) {
+        return null;
+      }
+      // A throttled Instagram can answer with an empty last page instead of an
+      // error, which ends the walk early. Deactivated accounts count towards
+      // the total without being listed, hence the small tolerance.
+      if (followerCount !== null && followersLoaded < followerCount * FOLLOWERS_LOADED_MIN_RATIO) {
+        console.error(`Followers list ended early: loaded ${followersLoaded} of ${followerCount}.`);
         return null;
       }
       return following
@@ -739,43 +613,24 @@ function App() {
       }
       setScanPercentage(10);
 
-      // Phase 2: Find out which of them follow back, picking the method that
-      // needs fewer requests for this account.
+      // Phase 2: Index every follower and keep the followed accounts missing from it.
       await paceRequest();
       const followerCount = await fetchViewerFollowerCount(viewerId);
-      const searchIsCheaper = followerCount === null
-        ? following.length <= FOLLOW_BACK_SEARCH_MAX_FOLLOWING
-        : following.length * FOLLOW_BACK_SEARCH_COST_FACTOR <= followerCount;
-
-      const searchOutcome = searchIsCheaper ? await checkBySearchingFollowers(viewerId, following) : null;
-
-      let nonFollowers: readonly UserNode[];
-      let checkedCount: number;
-      let scanIsComplete: boolean;
-      let stopReason: SearchOutcome["stopReason"] = null;
-      if (searchOutcome !== null) {
-        nonFollowers = searchOutcome.nonFollowers;
-        checkedCount = searchOutcome.checkedCount;
-        scanIsComplete = followingCompleted && searchOutcome.complete;
-        stopReason = searchOutcome.stopReason;
-      } else {
-        const indexed = await checkByFollowerIndex(following, followerCount);
-        if (indexed === null) {
-          setState(prevState =>
-            prevState.status === "scanning"
-              ? { ...prevState, isScanningActive: false, scanIncomplete: true }
-              : prevState,
-          );
-          setToast({
-            show: true,
-            text: t(lang, "scanFailedFollowers"),
-          });
-          return;
-        }
-        nonFollowers = indexed;
-        checkedCount = following.length;
-        scanIsComplete = followingCompleted;
+      const nonFollowers = await checkByFollowerIndex(following, followerCount);
+      if (nonFollowers === null) {
+        setState(prevState =>
+          prevState.status === "scanning"
+            ? { ...prevState, isScanningActive: false, scanIncomplete: true }
+            : prevState,
+        );
+        setToast({
+          show: true,
+          text: t(lang, "scanFailedFollowers"),
+        });
+        return;
       }
+      const checkedCount = following.length;
+      const scanIsComplete = followingCompleted;
 
       if (scanIsComplete || nonFollowers.length > 0) {
         saveCachedScanResults(nonFollowers);
@@ -796,17 +651,12 @@ function App() {
         };
       });
 
-      let finalToast: string;
-      if (scanIsComplete) {
-        finalToast = t(lang, "scanCompleted");
-      } else if (stopReason === "blocked") {
-        finalToast = t(lang, "scanBlocked", checkedCount);
-      } else if (stopReason === "unreliable") {
-        finalToast = t(lang, "followerSearchUnreliable", checkedCount);
-      } else {
-        finalToast = t(lang, "partialScanInterrupted", checkedCount);
-      }
-      setToast({ show: true, text: finalToast });
+      setToast({
+        show: true,
+        text: scanIsComplete
+          ? t(lang, "scanCompleted")
+          : t(lang, "partialScanInterrupted", checkedCount),
+      });
     };
     scan();
     // Dependency array not entirely legit, but works this way. TODO: Find a way to fix.

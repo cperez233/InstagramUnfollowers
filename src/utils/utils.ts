@@ -251,14 +251,9 @@ export async function isStillFollowing(user: { readonly id: string; readonly use
   if (viewerId === null) {
     return null;
   }
-  const url = `https://www.instagram.com/api/v1/friendships/${viewerId}/following/?count=12&query=${encodeURIComponent(user.username)}&search_surface=follow_list_page`;
   try {
-    const page = await fetchFriendshipsPageFromUrl(url);
-    const target = user.username.toLowerCase();
-    return (page.users ?? []).some(u => {
-      const { ids, username } = extractUserIdentities(u);
-      return ids.includes(user.id) || username === target;
-    });
+    const page = await searchFriendshipsPage('following', user.username, viewerId);
+    return pageIncludesUser(page, [user.id], user.username);
   } catch (e) {
     console.warn(`Could not verify unfollow of ${user.username}:`, e);
     return null;
@@ -391,6 +386,45 @@ export function friendshipsUrlGenerator(kind: FriendshipsListKind, maxId?: strin
   return maxId === undefined ? base : `${base}&max_id=${encodeURIComponent(maxId)}`;
 }
 
+// Searches one of `userId`'s lists for `query`, the way the search box in
+// instagram.com's followers/following dialog does. A single request answers
+// "is this account in the list?" without walking the whole list.
+export function searchFriendshipsPage(kind: FriendshipsListKind, query: string, userId: string): Promise<FriendshipsPage> {
+  const url = `https://www.instagram.com/api/v1/friendships/${userId}/${kind}/?count=12&query=${encodeURIComponent(query)}&search_surface=follow_list_page`;
+  return fetchFriendshipsPageFromUrl(url);
+}
+
+export function pageIncludesUser(page: FriendshipsPage, ids: readonly string[], username: string): boolean {
+  const target = username.trim().toLowerCase();
+  return (page.users ?? []).some(u => {
+    const candidate = extractUserIdentities(u);
+    return candidate.ids.some(id => ids.includes(id)) || (target !== '' && candidate.username === target);
+  });
+}
+
+// The viewer's follower count, or null if Instagram didn't give it to us.
+export async function fetchViewerFollowerCount(viewerId: string): Promise<number | null> {
+  try {
+    const response = await fetch(`https://www.instagram.com/api/v1/users/${viewerId}/info/`, {
+      credentials: 'same-origin',
+      headers: {
+        'X-IG-App-ID': INSTAGRAM_WEB_APP_ID,
+        'X-ASBD-ID': INSTAGRAM_ASBD_ID,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': '*/*',
+      },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const count = (await response.json())?.user?.follower_count;
+    return typeof count === 'number' ? count : null;
+  } catch (e) {
+    console.warn('Could not load follower count:', e);
+    return null;
+  }
+}
+
 export class InstagramApiError extends Error {
   readonly status: number;
   constructor(status: number, message: string) {
@@ -417,6 +451,33 @@ export async function fetchFriendshipsPage(kind: FriendshipsListKind, maxId?: st
 }
 
 async function fetchFriendshipsPageFromUrl(url: string, headers?: Record<string, string>): Promise<FriendshipsPage> {
+  const data = await fetchInstagramJson(url, headers);
+  if (!data?.users && data?.message) {
+    throw new InstagramApiError(200, data.message);
+  }
+  return data as FriendshipsPage;
+}
+
+export interface FriendshipStatus {
+  readonly following: boolean;
+  readonly followedBy: boolean;
+}
+
+// Asks Instagram directly whether the viewer follows `userId` and whether
+// `userId` follows the viewer back.
+export async function fetchFriendshipStatus(userId: string): Promise<FriendshipStatus> {
+  const url = `https://www.instagram.com/api/v1/friendships/show/${userId}/`;
+  const data = await fetchInstagramJson(url);
+  if (typeof data?.followed_by !== 'boolean' || typeof data?.following !== 'boolean') {
+    throw new InstagramApiError(200, `Instagram returned no friendship status for ${url}`);
+  }
+  return {
+    following: data.following || data.outgoing_request === true,
+    followedBy: data.followed_by,
+  };
+}
+
+async function fetchInstagramJson(url: string, headers?: Record<string, string>): Promise<any> {
   if (headers === undefined) {
     const csrftoken = getCookie('csrftoken') || '';
     headers = {
@@ -433,14 +494,27 @@ async function fetchFriendshipsPageFromUrl(url: string, headers?: Record<string,
     credentials: 'same-origin',
     headers,
   });
-  if (!response.ok) {
-    throw new InstagramApiError(response.status, `Instagram returned HTTP ${response.status} for ${url}`);
+  const text = await response.text();
+  let data: any = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // Instagram answers with its HTML page instead of JSON when the session
+    // was logged out or is being held at a checkpoint / "suspicious activity" screen.
   }
-  const data = (await response.json()) as any;
-  if (data?.status === 'fail' || (!data?.users && data?.message)) {
+  if (!response.ok) {
+    // The body carries the reason ("Please wait a few minutes", feedback_required...),
+    // which is what tells a temporary block apart from a real error.
+    const reason = data?.message ?? data?.feedback_message ?? text.slice(0, 200);
+    throw new InstagramApiError(response.status, `Instagram returned HTTP ${response.status} for ${url}: ${reason}`);
+  }
+  if (data === null) {
+    throw new InstagramApiError(response.status, `Instagram returned a web page instead of data for ${url} (logged out, or Instagram wants you to verify the account?)`);
+  }
+  if (data?.status === 'fail') {
     throw new InstagramApiError(response.status, data?.message || `Instagram returned failure status for ${url}`);
   }
-  return data as FriendshipsPage;
+  return data;
 }
 
 export function rawFriendshipUserToUserNode(raw: RawFriendshipUser, followsViewer: boolean): UserNode {

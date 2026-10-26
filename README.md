@@ -26,20 +26,14 @@ A nifty tool that lets you see who doesn't follow you back on Instagram.
    - Mac OS: `⌘ + ⌥ + I`
 5. Paste the code into the console and press `Enter`. You'll see this interface:
    <br/><img src="./assets/initial.png" alt="Initial screen" />
-6. Click **"Run Scan"** to start scanning (or **"⚡ Load previous scan"** to open your saved results instantly).
-7. As scanning runs, accounts appear live on screen, and follow-back status updates automatically:
+6. Click **"Scan"** to start (or **"See last scan"** to open your saved results instantly).
+7. As the scan runs, accounts that don't follow you back appear live on screen:
    <br/><img src="./assets/results.png" alt="Results screen" />
-8. 🤍 **Whitelist users** by clicking their profile image.
-9. 🌐 **Switch language** anytime between English and Spanish using the `🌐 EN / ES` button in the top bar.
-10. 💾 **Manage your whitelist** via Settings:
-    - Export: Save your whitelist as a JSON backup file
-    - Import: Restore or merge whitelisted users from a file
-    - Paste: Bulk-paste usernames directly into your protected whitelist
-    - Clear: Remove all users from whitelist
-    <br/><img src="./assets/settings_whitelist.png" alt="Settings screen" />
-11. ✅ **Select users** to unfollow using the checkboxes.
-12. ⚙️ **Customize script timings and language** via the "Settings" button:
-    <br/><img src="./assets/settings.png" alt="Settings screen" />
+8. 🔗 **Open any profile** by clicking its row, to review it on Instagram.
+9. 🙈 **Ignore accounts** you're fine with (brands, friends) with the eye button; they move to the "Ignored" tab and stay there across scans.
+10. ➖ **Unfollow** from the list with the "Following" button: click it, then confirm.
+11. 🔍 **Search**, **hide verified accounts** or **copy the list** of usernames from the bar above the list.
+12. 🌐 **Switch language** between English and Spanish from the top bar. The view follows Instagram's light or dark theme.
 
 ### 📱 Mobile Usage
 
@@ -55,12 +49,11 @@ For Android users who want to use it on mobile:
 - ⚡ **Instant Local Cache (0ms load)**: Re-open and review previously completed audits instantly without re-scraping from scratch.
 - 🌐 **Bilingual (EN / ES)**: Native English and Spanish support with instant switching.
 - 🛡️ **Anti-Ban & Session Protection**: Uses full Instagram Web headers (`X-ASBD-ID`, `X-CSRFToken`, `XMLHttpRequest`) to prevent forced logouts and suspicious activity flags.
-- 🛡️ **Action-Block Guard**: Double-checks unfollow API responses to prevent ghost unfollows; halts the queue automatically if Instagram returns `feedback_required` to protect your account.
+- 🛡️ **Action-Block Guard**: Double-checks unfollow API responses to prevent ghost unfollows; stops unfollowing automatically if Instagram returns `feedback_required` to protect your account.
 - ⏳ **Smart Rate-Limit & Soft-Block Backoff**: Automatically pauses and retries if Instagram returns HTTP 429 or HTTP 400 (`feedback_required`) with exponential cooldowns instead of failing.
 - ⚠️ **Wrong-Detect Guard**: Expanded page limits supporting accounts with tens of thousands of followers, with safe lock preventing accidental unfollows if a scan is interrupted.
-- 🤍 **Persistent & Bulk Whitelist**: Protect specific accounts with local persistence, JSON export/import, and direct username list pasting.
-- ⚙️ **Customizable Timings**: Control request pacing to match your account safety preferences.
-- 🎨 **Apple-inspired UI**: Clean, responsive, and minimalist interface.
+- 🙈 **Ignored accounts**: Hide the accounts you're fine with; the choice is saved locally.
+- 🎨 **Feels like Instagram**: A minimal list with Instagram's own type, colors and light/dark theme.
 - 🔒 **100% Client-Side Privacy**: All data is processed locally in your browser. No credentials or data are sent to external servers.
 
 ### 🛠️ Development
@@ -69,7 +62,9 @@ For Android users who want to use it on mobile:
 - Install dependencies: `npm install`
 - Build: `npm run build`
 - Dev server with live reload: `npm run build-dev`
-- Do not edit `public/index.html` manually: it is regenerated automatically by GitHub Actions, and PRs that modify it are rejected.
+- Build only the script (leaves `public/index.html` alone): `npm run webpack-build`
+- Preview the app locally: serve the repo root and open `public/preview.html?preview=results` (or `?preview=live`) on localhost.
+- The copy page is generated: edit `src/page/index.html`, and `npm run build` writes `public/index.html` from it with the bundled script. Do not edit `public/index.html` manually: GitHub Actions regenerates it, and PRs that modify it are rejected.
 
 ---
 
@@ -92,20 +87,14 @@ Una herramienta práctica y ligera que te permite ver quién no te sigue de vuel
    - Mac OS: `⌘ + ⌥ + I`
 5. Pega el código en la consola y presiona `Enter`. Verás la interfaz:
    <br/><img src="./assets/initial.png" alt="Pantalla inicial" />
-6. Haz clic en **"Iniciar Escaneo"** para comenzar (o **"⚡ Cargar escaneo anterior"** para ver tus resultados guardados al instante).
-7. Durante el escaneo, las cuentas se muestran en vivo y el estado de seguimiento se actualiza en tiempo real:
+6. Haz clic en **"Escanear"** para comenzar (o **"Ver último escaneo"** para abrir tus resultados guardados al instante).
+7. Durante el escaneo, las cuentas que no te siguen aparecen en vivo:
    <br/><img src="./assets/results.png" alt="Pantalla de resultados" />
-8. 🤍 **Agrega cuentas a la lista blanca** haciendo clic sobre su foto de perfil para protegerlas.
-9. 🌐 **Cambia el idioma** entre Español e Inglés en cualquier momento con el botón `🌐 ES / EN` en la barra superior.
-10. 💾 **Administra tu lista blanca** desde Ajustes:
-    - Exportar: Guarda tu lista blanca como respaldo en un archivo JSON.
-    - Importar: Restaura o combina cuentas desde un archivo de respaldo.
-    - Pegar: Pega listas de nombres de usuario para protegerlos directamente.
-    - Borrar: Limpia la lista blanca cuando lo desees.
-    <br/><img src="./assets/settings_whitelist.png" alt="Pantalla de ajustes de lista blanca" />
-11. ✅ **Selecciona los usuarios** que deseas dejar de seguir usando las casillas de verificación.
-12. ⚙️ **Personaliza los tiempos de espera y el idioma** desde el botón de "Ajustes":
-    <br/><img src="./assets/settings.png" alt="Pantalla de configuración" />
+8. 🔗 **Abre cualquier perfil** haciendo clic en su fila, para revisarlo en Instagram.
+9. 🙈 **Ignora las cuentas** que te dan igual (marcas, amigos) con el botón del ojo; pasan a la pestaña "Ignoradas" y se quedan ahí entre escaneos.
+10. ➖ **Deja de seguir** desde la lista con el botón "Siguiendo": púlsalo y confirma.
+11. 🔍 **Busca**, **oculta las cuentas verificadas** o **copia la lista** de usuarios desde la barra sobre la lista.
+12. 🌐 **Cambia el idioma** entre español e inglés desde la barra superior. La vista sigue el tema claro u oscuro de Instagram.
 
 ### 📱 Uso en Móvil (Android)
 
@@ -121,12 +110,11 @@ Para usuarios de Android que quieran utilizarlo desde el móvil:
 - ⚡ **Caché local instantáneo (0ms)**: Carga escaneos anteriores con un solo clic desde la pantalla inicial sin hacer peticiones innecesarias.
 - 🌐 **Soporte Bilingüe (Español / Inglés)**: Interfaz completamente en español e inglés con cambio instantáneo.
 - 🛡️ **Protección antibloqueo y anti-cierre de sesión**: Envía cabeceras completas de Instagram Web (`X-ASBD-ID`, `X-CSRFToken`, `XMLHttpRequest`) para evitar alertas de actividad sospechosa y cierres de sesión forzados.
-- 🛡️ **Protección contra bloqueos de acción (Action Block)**: Verifica la respuesta real de la API de Instagram al dejar de seguir evitando falsos éxitos ("ghost unfollows"); detiene la cola automáticamente ante `feedback_required` para proteger tu cuenta de suspensiones.
+- 🛡️ **Protección contra bloqueos de acción (Action Block)**: Verifica la respuesta real de la API de Instagram al dejar de seguir evitando falsos éxitos ("ghost unfollows"); deja de enviar unfollows ante `feedback_required` para proteger tu cuenta de suspensiones.
 - ⏳ **Manejo inteligente de Rate Limit y bloqueos suaves**: Pausa y reintenta automáticamente con pausas exponenciales ante respuestas HTTP 429 o HTTP 400 (`feedback_required`) evitando que el escaneo falle.
 - ⚠️ **Protección contra falsos no-seguidores**: Límites de páginas ampliados para cuentas con decenas de miles de seguidores, y bloqueo de seguridad del unfollow si el escaneo se interrumpió.
-- 🤍 **Lista blanca persistente y masiva**: Protege a tus amigos y familiares con guardado local, exportación/importación en JSON y opción de pegar nombres de usuario directamente.
-- ⚙️ **Tiempos configurables**: Ajusta los intervalos entre peticiones para mayor seguridad.
-- 🎨 **Diseño limpio y moderno**: Interfaz minimalista y responsiva inspirada en el diseño de Apple.
+- 🙈 **Cuentas ignoradas**: Oculta las cuentas que te dan igual; la elección se guarda en tu navegador.
+- 🎨 **Se siente como Instagram**: Una lista minimalista con la tipografía, los colores y el tema claro/oscuro de Instagram.
 - 🔒 **Privacidad total**: Todo se ejecuta localmente en tu navegador. Tus datos y contraseñas nunca salen de tu sesión ni van a servidores externos.
 
 ### 🛠️ Desarrollo
@@ -135,7 +123,9 @@ Para usuarios de Android que quieran utilizarlo desde el móvil:
 - Instalar dependencias: `npm install`
 - Compilar: `npm run build`
 - Servidor de desarrollo con recarga automática: `npm run build-dev`
-- No edites `public/index.html` a mano: se regenera automáticamente con GitHub Actions, y los PRs que lo modifican son rechazados.
+- Compilar solo el script (no toca `public/index.html`): `npm run webpack-build`
+- Vista previa local: sirve la raíz del repo y abre `public/preview.html?preview=results` (o `?preview=live`) en localhost.
+- La página de copiar se genera: edita `src/page/index.html`, y `npm run build` escribe `public/index.html` a partir de ella con el script compilado. No edites `public/index.html` a mano: GitHub Actions lo regenera, y los PRs que lo modifican son rechazados.
 
 ---
 

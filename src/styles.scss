@@ -1,4 +1,787 @@
-@use 'styles/_variables';
-@use 'styles/_helpers';
-@use 'styles/main';
-@use 'styles/ux_improvements';
+/* editorial-ui · Cristian Pérez · cristianperez.me */
+// The app replaces instagram.com's page, so it borrows Instagram's own
+// neutrals and blue to feel native, in light and dark.
+
+@mixin light-tokens {
+  --iu-bg: #ffffff;
+  --iu-ink: #0c1014;
+  --iu-muted: #737373;
+  --iu-line: #dbdfe4;
+  --iu-field: #efefef;
+  --iu-button: #efefef;
+  --iu-button-hover: #dbdbdb;
+  --iu-accent: #0095f6;
+  --iu-accent-hover: #1877f2;
+  --iu-accent-ink: #0064e0;
+  --iu-danger: #ed4956;
+  --iu-note: #fdf5e6;
+  --iu-note-ink: #6b4a00;
+  --iu-toast: #262626;
+  --iu-toast-ink: #ffffff;
+  --iu-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  color-scheme: light;
+}
+
+@mixin dark-tokens {
+  --iu-bg: #000000;
+  --iu-ink: #f5f5f5;
+  --iu-muted: #a8a8a8;
+  --iu-line: #262626;
+  --iu-field: #262626;
+  --iu-button: #262626;
+  --iu-button-hover: #363636;
+  --iu-accent: #0095f6;
+  --iu-accent-hover: #1877f2;
+  --iu-accent-ink: #4cb5f9;
+  --iu-danger: #ed4956;
+  --iu-note: #2a2112;
+  --iu-note-ink: #f2d39b;
+  --iu-toast: #363636;
+  --iu-toast-ink: #f5f5f5;
+  --iu-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+:root {
+  @include light-tokens;
+  --iu-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --iu-fast: 160ms;
+  --iu-slow: 320ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-iu-theme="light"]) {
+    @include dark-tokens;
+  }
+}
+
+:root[data-iu-theme="dark"] {
+  @include dark-tokens;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--iu-bg);
+  overflow-x: clip;
+  scrollbar-gutter: stable;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iu {
+  min-height: 100vh;
+  min-height: 100svh;
+  background: var(--iu-bg);
+  color: var(--iu-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 18px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  // :where() keeps these resets weaker than every component class below.
+  :where(h1, p, ul) {
+    margin: 0;
+    padding: 0;
+  }
+
+  :where(a) {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  :where(button, input) {
+    font: inherit;
+    color: inherit;
+    margin: 0;
+  }
+
+  :where(button) {
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  :where(button:disabled) {
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--iu-accent);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+
+// Header
+
+.iu-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--iu-bg);
+  border-bottom: 1px solid var(--iu-line);
+}
+
+.iu-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 632px;
+  height: 56px;
+  margin: 0 auto;
+  padding: 0 8px 0 16px;
+}
+
+.iu-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+
+  .iu-logo {
+    flex-shrink: 0;
+  }
+}
+
+.iu-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iu-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  opacity: 0;
+  transition: opacity var(--iu-slow) var(--iu-ease);
+
+  &.is-active {
+    opacity: 1;
+  }
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--iu-accent);
+    transform-origin: left center;
+    transition: transform 600ms var(--iu-ease);
+  }
+}
+
+// Controls
+
+.iu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--iu-fast) ease-out, transform var(--iu-fast) ease-out;
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+.iu-button--primary {
+  background: var(--iu-accent);
+  color: #fff;
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--iu-accent-hover);
+    }
+  }
+}
+
+.iu-button--secondary {
+  background: var(--iu-button);
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--iu-button-hover);
+    }
+  }
+}
+
+.iu-button--small {
+  min-height: 36px;
+  padding: 0 16px;
+}
+
+.iu-text-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--iu-fast) ease-out, opacity var(--iu-fast) ease-out;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      background: var(--iu-button);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+.iu-text-button--accent {
+  color: var(--iu-accent-ink);
+}
+
+.iu-icon-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color var(--iu-fast) ease-out, transform var(--iu-fast) ease-out;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--iu-button);
+    }
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+}
+
+// Start
+
+.iu-start {
+  max-width: 632px;
+  margin: 0 auto;
+  padding: clamp(48px, 16vh, 160px) 16px 64px;
+
+  h1 {
+    max-width: 14em;
+    font-size: clamp(30px, 6vw, 44px);
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+}
+
+.iu-start__lede {
+  max-width: 30em;
+  margin-top: 16px;
+  color: var(--iu-muted);
+  font-size: 16px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.iu-start__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 32px;
+}
+
+.iu-start__meta {
+  margin-top: 12px;
+  color: var(--iu-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.iu-start__note {
+  max-width: 32em;
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--iu-line);
+  color: var(--iu-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+// Results
+
+.iu-results {
+  max-width: 632px;
+  margin: 0 auto;
+  padding: 0 16px 96px;
+}
+
+.iu-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 28px 0 20px;
+
+  h1 {
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.iu-summary__text {
+  min-width: 0;
+}
+
+.iu-summary__meta {
+  margin-top: 4px;
+  color: var(--iu-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.iu-note {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--iu-note);
+  color: var(--iu-note-ink);
+  line-height: 1.4;
+}
+
+.iu-tabs {
+  display: flex;
+  margin: 0 -16px 12px;
+  border-bottom: 1px solid var(--iu-line);
+}
+
+.iu-tab {
+  position: relative;
+  flex: 1;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--iu-muted);
+  font-weight: 600;
+  transition: color var(--iu-fast) ease-out;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: -1px;
+    height: 1px;
+    background: var(--iu-ink);
+    transform: scaleX(0);
+    transition: transform var(--iu-slow) var(--iu-ease);
+  }
+
+  &[aria-selected="true"] {
+    color: var(--iu-ink);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+}
+
+.iu-tab__count {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.iu-toolbar {
+  position: sticky;
+  top: 57px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 -16px;
+  padding: 8px 16px;
+  background: var(--iu-bg);
+}
+
+.iu-search {
+  display: flex;
+  flex: 1 1 240px;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--iu-field);
+  color: var(--iu-muted);
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--iu-ink);
+    font-size: 16px;
+    -webkit-appearance: none;
+    appearance: none;
+
+    &::placeholder {
+      color: var(--iu-muted);
+    }
+
+    &::-webkit-search-cancel-button {
+      opacity: 0.6;
+    }
+  }
+
+  &:focus-within {
+    box-shadow: inset 0 0 0 1px var(--iu-muted);
+  }
+}
+
+.iu-toolbar__options {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  @media (min-width: 560px) {
+    flex: 0 0 auto;
+  }
+}
+
+.iu-chip {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--iu-line);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--iu-fast) ease-out, border-color var(--iu-fast) ease-out, color var(--iu-fast) ease-out;
+
+  &[aria-pressed="true"] {
+    border-color: var(--iu-ink);
+    background: var(--iu-ink);
+    color: var(--iu-bg);
+  }
+
+  @media (hover: hover) {
+    &:hover:not([aria-pressed="true"]) {
+      background: var(--iu-button);
+    }
+  }
+}
+
+// List
+
+.iu-list {
+  list-style: none;
+  padding-top: 4px;
+}
+
+.iu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 60px;
+  animation: iu-row-in var(--iu-slow) var(--iu-ease) both;
+  transition: opacity var(--iu-slow) ease-out;
+
+  &.is-done .iu-row__profile {
+    opacity: 0.45;
+  }
+}
+
+@keyframes iu-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.iu-row__profile {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 0;
+  border-radius: 8px;
+  transition: opacity var(--iu-slow) ease-out;
+
+  @media (hover: hover) {
+    &:hover .iu-row__handle {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  }
+}
+
+.iu-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--iu-field);
+  box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.12);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.iu-avatar__initial {
+  color: var(--iu-muted);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.iu-row__names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.iu-row__username {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-weight: 600;
+
+  .iu-verified {
+    flex-shrink: 0;
+  }
+}
+
+.iu-row__handle,
+.iu-row__fullname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iu-row__fullname {
+  color: var(--iu-muted);
+}
+
+.iu-row__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.iu-follow-button {
+  // One width for every state, so confirming never shifts the row.
+  width: 116px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--iu-button);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--iu-fast) ease-out, color var(--iu-fast) ease-out, transform var(--iu-fast) ease-out;
+
+  @media (hover: hover) {
+    &:hover:not(:disabled):not(.is-confirm) {
+      background: var(--iu-button-hover);
+    }
+
+    &.is-confirm:hover {
+      background: #d83a47;
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &.is-confirm {
+    background: var(--iu-danger);
+    color: #fff;
+    font-size: 13px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+
+  &[aria-busy="true"] {
+    opacity: 0.7;
+    cursor: progress;
+  }
+}
+
+.iu-row__done {
+  width: 116px;
+  padding: 0 4px;
+  color: var(--iu-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.iu-row__ignore {
+  color: var(--iu-muted);
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--iu-ink);
+    }
+  }
+}
+
+.iu-empty {
+  padding: 56px 0;
+  color: var(--iu-muted);
+  font-size: 15px;
+  line-height: 1.45;
+  text-align: center;
+
+  p {
+    max-width: 26em;
+    margin: 0 auto;
+    text-wrap: balance;
+  }
+
+  .iu-text-button {
+    margin-top: 12px;
+  }
+}
+
+.iu-empty__hint {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.iu-more {
+  width: 100%;
+  margin-top: 16px;
+}
+
+// Toast
+
+.iu-toast-region {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.iu-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 600px;
+  min-height: 48px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 12px;
+  background: var(--iu-toast);
+  color: var(--iu-toast-ink);
+  box-shadow: var(--iu-shadow);
+  pointer-events: auto;
+  animation: iu-toast-in var(--iu-slow) var(--iu-ease) both;
+
+  p {
+    flex: 1;
+    line-height: 1.4;
+  }
+}
+
+@keyframes iu-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.iu-toast__action {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  // The toast is dark in both themes, so its link uses the light blue.
+  color: #4cb5f9;
+  font-weight: 600;
+}
+
+.iu-toast__close {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iu *,
+  .iu *::before,
+  .iu *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

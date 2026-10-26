@@ -1,139 +1,107 @@
-# 📱 Instagram Unfollowers
+# InstagramUnfollowers
 
-[![Maintenance](https://img.shields.io/maintenance/yes/2026)](https://github.com/davidarroyo1234/InstagramUnfollowers)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[Español](#español) · [English](#english)
 
-[🇬🇧 English](#-english) | [🇪🇸 Español](#-español)
+<img src="./assets/results.png" alt="Lista de cuentas que no te siguen" width="720" />
 
----
+## Español
 
-<a name="-english"></a>
-## 🇬🇧 English
+Muestra qué cuentas de las que sigues no te siguen de vuelta. Corre en tu navegador, dentro de tu sesión de Instagram: no hay que instalar nada y no pide la contraseña.
 
-A nifty tool that lets you see who doesn't follow you back on Instagram.  
-<u>Browser-based and requires no downloads or installations!</u>
+Es un fork de [InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers) de David Arroyo. La idea y la base son suyas; en este fork se rehízo la forma de comprobar quién te sigue, que en cuentas grandes daba falsos "no te sigue", y se simplificó la interfaz. Más abajo está el detalle.
 
-> ⚡ **Live Streaming & Fast Cache:** Accounts now appear dynamically on screen in real time as batches are fetched from Instagram. In addition, completed scans are cached locally so you can reload your audit instantly (0ms) without making unnecessary API calls!
+**Para copiar el código:** https://cperez233.github.io/InstagramUnfollowers/
 
-### 🖥️ Desktop Usage
+### Cómo se usa
 
-1. Copy the code from: [InstagramUnfollowers Tool](https://davidarroyo1234.github.io/InstagramUnfollowers/)
-2. Press the COPY button to copy the code:
-   <br/><img src="./assets/copy_code.png" alt="Copy code button" />
-3. Go to the Instagram website and log in to your account.
-4. Open the developer console:
-   - Windows / Linux: `Ctrl + Shift + J`
-   - Mac OS: `⌘ + ⌥ + I`
-5. Paste the code into the console and press `Enter`. You'll see this interface:
-   <br/><img src="./assets/initial.png" alt="Initial screen" />
-6. Click **"Scan"** to start (or **"See last scan"** to open your saved results instantly).
-7. As the scan runs, accounts that don't follow you back appear live on screen:
-   <br/><img src="./assets/results.png" alt="Results screen" />
-8. 🔗 **Open any profile** by clicking its row, to review it on Instagram.
-9. 🙈 **Ignore accounts** you're fine with (brands, friends) with the eye button; they move to the "Ignored" tab and stay there across scans.
-10. ➖ **Unfollow** from the list with the "Following" button: click it, then confirm.
-11. 🔍 **Search**, **hide verified accounts** or **copy the list** of usernames from the bar above the list.
-12. 🌐 **Switch language** between English and Spanish from the top bar. The view follows Instagram's light or dark theme.
+1. Abre la página de arriba y pulsa **Copiar código**.
+2. Entra a [instagram.com](https://www.instagram.com/) desde el ordenador e inicia sesión.
+3. Abre la consola (`Ctrl + Shift + J` en Windows y Linux, `⌘ + ⌥ + J` en Mac), pega el código y pulsa `Enter`.
+4. Pulsa **Escanear**. Las cuentas que no te siguen van apareciendo mientras se revisa el resto.
 
-### 📱 Mobile Usage
+Desde la lista puedes abrir cada perfil, buscar, ocultar las cuentas verificadas y copiar la lista de usuarios. Las cuentas que te dan igual (marcas, amigos que no usan Instagram) se pueden ignorar: pasan a la pestaña *Ignoradas* y no vuelven a salir en los siguientes escaneos. También puedes dejar de seguir a una cuenta con el botón *Siguiendo*, que pide confirmación.
 
-For Android users who want to use it on mobile:
-1. Download the latest version of [Eruda Android Browser](https://github.com/liriliri/eruda-android/releases/)
-2. Open Instagram web through the Eruda browser
-3. Follow the same steps as desktop (the console will be automatically available when clicking the Eruda icon)
+El último escaneo queda guardado en el navegador, así que puedes volver a verlo sin escanear otra vez.
 
-### ✨ Features
+Escanear tarda alrededor de un segundo por cada cuenta que sigues. Si Instagram empieza a limitar las peticiones, el escaneo se detiene y te enseña lo que ya alcanzó a comprobar; en ese caso conviene esperar unas horas antes de repetirlo.
 
-- 🔍 **Scan & Detect**: Accurately identifies users who don't follow you back.
-- ⚡ **Live Progressive Streaming**: Accounts stream dynamically onto your screen as each batch arrives, eliminating blank waiting screens on large accounts.
-- ⚡ **Instant Local Cache (0ms load)**: Re-open and review previously completed audits instantly without re-scraping from scratch.
-- 🌐 **Bilingual (EN / ES)**: Native English and Spanish support with instant switching.
-- 🛡️ **Anti-Ban & Session Protection**: Uses full Instagram Web headers (`X-ASBD-ID`, `X-CSRFToken`, `XMLHttpRequest`) to prevent forced logouts and suspicious activity flags.
-- 🛡️ **Action-Block Guard**: Double-checks unfollow API responses to prevent ghost unfollows; stops unfollowing automatically if Instagram returns `feedback_required` to protect your account.
-- ⏳ **Smart Rate-Limit & Soft-Block Backoff**: Automatically pauses and retries if Instagram returns HTTP 429 or HTTP 400 (`feedback_required`) with exponential cooldowns instead of failing.
-- ⚠️ **Wrong-Detect Guard**: Expanded page limits supporting accounts with tens of thousands of followers, with safe lock preventing accidental unfollows if a scan is interrupted.
-- 🙈 **Ignored accounts**: Hide the accounts you're fine with; the choice is saved locally.
-- 🎨 **Feels like Instagram**: A minimal list with Instagram's own type, colors and light/dark theme.
-- 🔒 **100% Client-Side Privacy**: All data is processed locally in your browser. No credentials or data are sent to external servers.
+En el móvil no hay consola. En Android funciona con el navegador [Eruda](https://github.com/liriliri/eruda-android/releases/), que trae una.
 
-### 🛠️ Development
+### Qué cambia respecto al original
 
-- Node version: Node 16+ / Node 18+ / Node 20+
-- Install dependencies: `npm install`
-- Build: `npm run build`
-- Dev server with live reload: `npm run build-dev`
-- Build only the script (leaves `public/index.html` alone): `npm run webpack-build`
-- Preview the app locally: serve the repo root and open `public/preview.html?preview=results` (or `?preview=live`) on localhost.
-- The copy page is generated: edit `src/page/index.html`, and `npm run build` writes `public/index.html` from it with the bundled script. Do not edit `public/index.html` manually: GitHub Actions regenerates it, and PRs that modify it are rejected.
+**Cómo se comprueba quién te sigue.** La versión original descargaba la lista completa de tus seguidores y la cruzaba con la de seguidos. Instagram entrega esa lista en tandas de 12 a 25 personas, así que una cuenta con miles de seguidores necesitaba cientos de peticiones. Bastaba con que una fallara, o con que Instagram cortara la lista antes de tiempo, para que gente que sí te sigue apareciera como que no.
+
+Ahora se carga la lista de cuentas que sigues y, para cada una, se consulta `/api/v1/friendships/show/<id>/`, que responde directamente si esa cuenta te sigue (`followed_by`). El número de peticiones depende de cuántas cuentas sigues, no de cuántos seguidores tienes.
+
+Si sigues a muchas más cuentas de las que te siguen, sale más barato recorrer tus seguidores, y entonces se hace como antes, con una diferencia: el resultado solo se da por bueno si se cargó al menos el 97 % de tus seguidores. Si no, el escaneo avisa del error en lugar de mostrar una lista equivocada.
+
+Antes de quedarnos con esto probamos otras vías. `friendships/show_many` devuelve HTML cuando se llama desde la web, `web_profile_info` responde con 429 casi enseguida, y buscar cada cuenta dentro de tus seguidores devolvía resultados vacíos para cuentas que sí te seguían.
+
+**La interfaz.** Ahora es una sola lista con el aspecto de Instagram, y sigue su tema claro u oscuro. Se quitó lo que no hace falta para ver quién no te sigue: los filtros de cuentas privadas y sin foto, seleccionar todo, dejar de seguir en bloque, la exportación a JSON y CSV, y el panel de ajustes. Dejar de seguir ahora se hace de una en una, como en la propia app.
+
+**La página para copiar el código.** Se rehízo con los pasos a la vista y un marcador que se puede arrastrar a la barra del navegador.
+
+<img src="./assets/copy-page.png" alt="Página para copiar el código" width="720" />
+
+### Desarrollo
+
+- Node 16 o superior.
+- `npm install`
+- `npm run webpack-build` compila `dist/dist.js`.
+- `npm run build` compila y además genera `public/index.html` a partir de `src/page/index.html`. Esto lo hace GitHub Actions al publicar en cada push a `master`. No edites `public/index.html` a mano: los PR que lo modifican se rechazan.
+- Para probar la interfaz sin Instagram, sirve la raíz del repo y abre `http://localhost:<puerto>/public/preview.html?preview=results` (o `?preview=live` para ver un escaneo en curso). En `localhost` se usan datos de prueba.
+
+### Licencia
+
+MIT. El proyecto original es de David Arroyo y sus colaboradores; ver [LICENSE](LICENSE).
 
 ---
 
-<a name="-español"></a>
-## 🇪🇸 Español
+## English
 
-Una herramienta práctica y ligera que te permite ver quién no te sigue de vuelta en Instagram.  
-<u>¡Funciona directamente en tu navegador y no requiere descargas ni instalaciones externas!</u>
+Shows which of the accounts you follow don't follow you back. It runs in your browser, inside your Instagram session: nothing to install, and it never asks for your password.
 
-> ⚡ **Transmisión en vivo y caché rápido:** Ahora las cuentas aparecen dinámicamente en pantalla en tiempo real a medida que se descargan los lotes de Instagram. Además, los escaneos completados se guardan localmente para recargar tu lista al instante (0ms) sin hacer peticiones innecesarias.
+This is a fork of David Arroyo's [InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers). The idea and the groundwork are his; this fork changes how it checks who follows you, which gave false "doesn't follow you" results on large accounts, and simplifies the interface. Details below.
 
-### 🖥️ Uso en Computadora (Escritorio)
+**Copy the code here:** https://cperez233.github.io/InstagramUnfollowers/
 
-1. Copia el código desde la página oficial: [Herramienta InstagramUnfollowers](https://davidarroyo1234.github.io/InstagramUnfollowers/)
-2. Presiona el botón **COPY** para copiar el script.
-   <br/><img src="./assets/copy_code.png" alt="Botón copiar código" />
-3. Entra a Instagram en tu navegador e inicia sesión en tu cuenta.
-4. Abre la consola de desarrollador:
-   - Windows / Linux: `Ctrl + Shift + J`
-   - Mac OS: `⌘ + ⌥ + I`
-5. Pega el código en la consola y presiona `Enter`. Verás la interfaz:
-   <br/><img src="./assets/initial.png" alt="Pantalla inicial" />
-6. Haz clic en **"Escanear"** para comenzar (o **"Ver último escaneo"** para abrir tus resultados guardados al instante).
-7. Durante el escaneo, las cuentas que no te siguen aparecen en vivo:
-   <br/><img src="./assets/results.png" alt="Pantalla de resultados" />
-8. 🔗 **Abre cualquier perfil** haciendo clic en su fila, para revisarlo en Instagram.
-9. 🙈 **Ignora las cuentas** que te dan igual (marcas, amigos) con el botón del ojo; pasan a la pestaña "Ignoradas" y se quedan ahí entre escaneos.
-10. ➖ **Deja de seguir** desde la lista con el botón "Siguiendo": púlsalo y confirma.
-11. 🔍 **Busca**, **oculta las cuentas verificadas** o **copia la lista** de usuarios desde la barra sobre la lista.
-12. 🌐 **Cambia el idioma** entre español e inglés desde la barra superior. La vista sigue el tema claro u oscuro de Instagram.
+### How to use it
 
-### 📱 Uso en Móvil (Android)
+1. Open the page above and click **Copy code**.
+2. Go to [instagram.com](https://www.instagram.com/) on a computer and log in.
+3. Open the console (`Ctrl + Shift + J` on Windows and Linux, `⌘ + ⌥ + J` on a Mac), paste the code and press `Enter`.
+4. Click **Scan**. Accounts that don't follow you back show up while the rest are being checked.
 
-Para usuarios de Android que quieran utilizarlo desde el móvil:
-1. Descarga la última versión de [Eruda Android Browser](https://github.com/liriliri/eruda-android/releases/)
-2. Abre la versión web de Instagram a través del navegador Eruda.
-3. Sigue los mismos pasos que en la computadora (la consola estará disponible al tocar el ícono de Eruda).
+From the list you can open each profile, search, hide verified accounts and copy the usernames. Accounts you don't care about (brands, friends who don't use Instagram) can be ignored: they move to the *Ignored* tab and stay out of later scans. You can also unfollow an account with its *Following* button, which asks you to confirm.
 
-### ✨ Características Principales
+The last scan is saved in the browser, so you can look at it again without scanning.
 
-- 🔍 **Detección precisa**: Encuentra rápidamente a quienes sigues pero no te siguen de vuelta.
-- ⚡ **Carga progresiva en vivo**: Las cuentas aparecen en pantalla en tiempo real mientras se descargan, evitando pantallas en blanco en cuentas con muchos seguidos.
-- ⚡ **Caché local instantáneo (0ms)**: Carga escaneos anteriores con un solo clic desde la pantalla inicial sin hacer peticiones innecesarias.
-- 🌐 **Soporte Bilingüe (Español / Inglés)**: Interfaz completamente en español e inglés con cambio instantáneo.
-- 🛡️ **Protección antibloqueo y anti-cierre de sesión**: Envía cabeceras completas de Instagram Web (`X-ASBD-ID`, `X-CSRFToken`, `XMLHttpRequest`) para evitar alertas de actividad sospechosa y cierres de sesión forzados.
-- 🛡️ **Protección contra bloqueos de acción (Action Block)**: Verifica la respuesta real de la API de Instagram al dejar de seguir evitando falsos éxitos ("ghost unfollows"); deja de enviar unfollows ante `feedback_required` para proteger tu cuenta de suspensiones.
-- ⏳ **Manejo inteligente de Rate Limit y bloqueos suaves**: Pausa y reintenta automáticamente con pausas exponenciales ante respuestas HTTP 429 o HTTP 400 (`feedback_required`) evitando que el escaneo falle.
-- ⚠️ **Protección contra falsos no-seguidores**: Límites de páginas ampliados para cuentas con decenas de miles de seguidores, y bloqueo de seguridad del unfollow si el escaneo se interrumpió.
-- 🙈 **Cuentas ignoradas**: Oculta las cuentas que te dan igual; la elección se guarda en tu navegador.
-- 🎨 **Se siente como Instagram**: Una lista minimalista con la tipografía, los colores y el tema claro/oscuro de Instagram.
-- 🔒 **Privacidad total**: Todo se ejecuta localmente en tu navegador. Tus datos y contraseñas nunca salen de tu sesión ni van a servidores externos.
+A scan takes about a second per account you follow. If Instagram starts limiting requests, the scan stops and shows what it had already checked; wait a few hours before running it again.
 
-### 🛠️ Desarrollo
+Mobile browsers have no console. On Android it works with the [Eruda](https://github.com/liriliri/eruda-android/releases/) browser, which adds one.
 
-- Versión de Node: Node 16+ / Node 18+ / Node 20+
-- Instalar dependencias: `npm install`
-- Compilar: `npm run build`
-- Servidor de desarrollo con recarga automática: `npm run build-dev`
-- Compilar solo el script (no toca `public/index.html`): `npm run webpack-build`
-- Vista previa local: sirve la raíz del repo y abre `public/preview.html?preview=results` (o `?preview=live`) en localhost.
-- La página de copiar se genera: edita `src/page/index.html`, y `npm run build` escribe `public/index.html` a partir de ella con el script compilado. No edites `public/index.html` a mano: GitHub Actions lo regenera, y los PRs que lo modifican son rechazados.
+### What's different from the original
 
----
+**How it checks who follows you.** The original downloaded your whole followers list and compared it with the accounts you follow. Instagram serves that list 12 to 25 people at a time, so an account with thousands of followers needed hundreds of requests. A single failed request, or Instagram ending the list early, was enough for people who do follow you to show up as if they didn't.
 
-## ⚖️ Legal & License
+Now it loads the accounts you follow and asks `/api/v1/friendships/show/<id>/` about each one, which answers directly whether that account follows you (`followed_by`). The number of requests depends on how many accounts you follow, not on how many followers you have.
 
-**Disclaimer:** This tool is not affiliated, associated, authorized, endorsed by, or officially connected with Instagram.  
-**Aviso:** Esta herramienta no está afiliada, asociada ni respaldada oficialmente por Instagram.
+If you follow far more accounts than follow you, walking your followers is cheaper, so it does that instead, with one difference: the result only counts if at least 97% of your followers were loaded. Otherwise the scan reports an error instead of showing a wrong list.
 
-⚠️ **Use at your own risk! / ¡Úsalo bajo tu propio riesgo!**
+We tried other routes first. `friendships/show_many` returns HTML when called from the web, `web_profile_info` answers 429 almost right away, and searching for each account among your followers came back empty for accounts that did follow you.
 
-📜 Licensed under the [MIT License](LICENSE)
+**The interface.** It's now a single list that looks like Instagram and follows its light or dark theme. Anything you don't need to see who doesn't follow you back is gone: the private and no-photo filters, select all, bulk unfollow, JSON and CSV export, and the settings panel. Unfollowing is now one account at a time, like in the app.
+
+**The copy page.** Rebuilt, with the steps in view and a bookmark you can drag to your browser's bar.
+
+### Development
+
+- Node 16 or newer.
+- `npm install`
+- `npm run webpack-build` builds `dist/dist.js`.
+- `npm run build` also generates `public/index.html` from `src/page/index.html`. GitHub Actions runs it on every push to `master` to publish the page. Don't edit `public/index.html` by hand: PRs that change it are rejected.
+- To try the interface without Instagram, serve the repo root and open `http://localhost:<port>/public/preview.html?preview=results` (or `?preview=live` for a scan in progress). On `localhost` it uses sample data.
+
+### License
+
+MIT. The original project is by David Arroyo and its contributors; see [LICENSE](LICENSE).
